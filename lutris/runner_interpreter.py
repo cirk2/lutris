@@ -103,15 +103,18 @@ def get_launch_parameters(runner, gameplay_info):
     # Gamescope
     gamescope = system_config.get("gamescope") and system.find_executable("gamescope")
     if gamescope:
-        launch_arguments = get_gamescope_args(launch_arguments, system_config)
+        launch_arguments, env = get_gamescope_args(launch_arguments, system_config, env)
 
     return launch_arguments, env
 
 
-def get_gamescope_args(launch_arguments, system_config):
+def get_gamescope_args(launch_arguments, system_config, env):
     """Insert gamescope at the start of the launch arguments"""
-    launch_arguments.insert(0, "--")
-    launch_arguments.insert(0, "-f")
+    wrapped_args = ""
+    for env_var in env:
+        wrapped_args += "%s='%s' " % (env_var, env[env_var])
+    wrapped_args += " ".join([shlex.quote(c) for c in launch_arguments])
+    launch_arguments = [ "-f", "--", "bash", "-c", wrapped_args ]
     if system_config.get("gamescope_output_res"):
         output_width, output_height = system_config["gamescope_output_res"].lower().split("x")
         launch_arguments.insert(0, output_height)
@@ -125,7 +128,7 @@ def get_gamescope_args(launch_arguments, system_config):
         launch_arguments.insert(0, game_width)
         launch_arguments.insert(0, "-w")
     launch_arguments.insert(0, "gamescope")
-    return launch_arguments
+    return launch_arguments, {}
 
 
 def export_bash_script(runner, gameplay_info, script_path):
